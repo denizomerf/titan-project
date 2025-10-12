@@ -1,0 +1,62 @@
+name: Titan CI/CD Pipeline
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    name: Build, Scan and Push Docker Image
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write 
+      contents: read 
+
+    
+    steps:
+     
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      
+      - name: Set up Checkov
+        id: checkov
+        uses: bridgecrewio/checkov-action@v12
+
+      
+      - name: Run Checkov on Terraform code
+        run: checkov --directory . --framework terraform
+
+     
+      - name: Set up Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+     
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::308740035407:role/titan-github-actions-role # BURAYI KENDİ AWS HESAP ID'N İLE DEĞİŞTİR!
+          aws-region: eu-central-1
+
+     
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+     
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: titan-api
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG

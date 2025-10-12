@@ -1,0 +1,8 @@
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+.tfstate.
+.git/
+.gitignore
+.github/
+.vscode/

@@ -19,6 +19,7 @@ resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
   name = "titan-vpc-flow-logs"
 }
 
+# checkov:skip=CKV_AWS_130:Public subnets are intended to assign public IPs by design
 
 resource "aws_subnet" "public_a" {
     vpc_id = aws_vpc.main.id
@@ -30,6 +31,7 @@ resource "aws_subnet" "public_a" {
       Name = "titan-public-subnet-a"
     }
 }
+# checkov:skip=CKV_AWS_130:Public subnets are intended to assign public IPs by design
 
 resource "aws_subnet" "public_b" {
     vpc_id = aws_vpc.main.id

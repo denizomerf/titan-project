@@ -8,6 +8,17 @@ resource "aws_vpc" "main" {
   }
 }
 
+resource "aws_flow_log" "main" {
+  iam_role_arn    = aws_iam_role.vpc_flow_log_role.arn
+  log_destination = aws_cloudwatch_log_group.vpc_flow_logs.arn
+  traffic_type    = "ALL"
+  vpc_id          = aws_vpc.main.id
+}
+
+resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
+  name = "titan-vpc-flow-logs"
+}
+
 
 resource "aws_subnet" "public_a" {
     vpc_id = aws_vpc.main.id

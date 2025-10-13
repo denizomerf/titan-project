@@ -62,7 +62,7 @@ jobs:
           aws-region: eu-central-1
 
       - name: Set up kubectl
-        run: aws eks update-kubeconfig --region eu-central-1 --name titan-cluster
+        run: aws eks update-kubeconfig --region eu-central-1 --name titan-eks-cluster
 
       - name: Deploy to EKS
         run: |

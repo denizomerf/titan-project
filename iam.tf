@@ -28,6 +28,26 @@ resource "aws_iam_role_policy_attachment" "github_actions_ecr" {
   
 }
 
+resource "aws_iam_policy" "github_actions_eks_access" {
+  name        = "GitHubActionsEKSAccessPolicy"
+  description = "Allows GitHub Actions to describe the EKS cluster to configure kubectl."
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action   = "eks:DescribeCluster",
+        Effect   = "Allow",
+        Resource = aws_eks_cluster.main.arn
+      }
+    ]
+  })
+}
+resource "aws_iam_role_policy_attachment" "github_actions_eks_access_attach" {
+  role       = aws_iam_role.github_actions.name
+  policy_arn = aws_iam_policy.github_actions_eks_access.arn
+}
+
 
 resource "aws_iam_role" "vpc_flow_log_role" {
   name = "vpc-flow-log-role"

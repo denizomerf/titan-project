@@ -73,15 +73,42 @@ jobs:
       - name: Set up kubectl
         run: aws eks update-kubeconfig --region eu-central-1 --name titan-eks-cluster
 
+      - name: Resolve image to deploy (fallback from ECR)
+        id: resolve-image
+        env:
+          AWS_REGION: eu-central-1
+          REPO: titan-api
+        run: |
+          set -eux
+          # Prefer the job output from the build-and-push job
+          IMAGE="${{ needs.build-and-push.outputs.image }}"
+          echo "Image from job output: '$IMAGE'"
+
+          if [ -z "$IMAGE" ]; then
+            echo "Job output empty — querying ECR for latest image tag..."
+            LATEST_TAG=$(aws ecr describe-images --repository-name "$REPO" \
+              --region $AWS_REGION \
+              --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' \
+              --output text)
+            if [ -z "$LATEST_TAG" ] || [ "$LATEST_TAG" = "None" ]; then
+              echo "No image tag found in ECR for $REPO" >&2
+              exit 1
+            fi
+            ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+            IMAGE="${ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${REPO}:${LATEST_TAG}"
+            echo "Resolved image from ECR: $IMAGE"
+          fi
+
+          echo "deploy_image=$IMAGE" >> $GITHUB_OUTPUT
+
       - name: Deploy to EKS
         run: |
-          echo "Built image: '${{ needs.build-and-push.outputs.image }}'"
-          if [ -z "${{ needs.build-and-push.outputs.image }}" ]; then
-            echo "Error: built image output is empty. Build step may have failed to set the output." >&2
+          echo "Deploy image: '${{ steps.resolve-image.outputs.deploy_image }}'"
+          if [ -z "${{ steps.resolve-image.outputs.deploy_image }}" ]; then
+            echo "Error: resolved image is empty. Cannot deploy." >&2
             exit 1
           fi
 
-          # Use kubectl set image to avoid modifying files and cause of invalid manifest when image is empty
           kubectl apply -f k8s/
-          kubectl set image deployment/titan-api-deployment titan-api-container=${{ needs.build-and-push.outputs.image }} --record
+          kubectl set image deployment/titan-api-deployment titan-api-container=${{ steps.resolve-image.outputs.deploy_image }} --record
 

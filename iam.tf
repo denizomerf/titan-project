@@ -3,41 +3,29 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
     principals {
-      type        = "Federated"
-      identifiers = ["arn:aws:iam::308740035407:oidc-provider/token.actions.githubusercontent.com"]
+      type = "Federated"
+      identifiers = ["arn:aws:iam::308740035407:oidc-provider/token.actions.githubusercontent.com"] 
     }
     condition {
-      test     = "StringEquals"
+      test = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:denizsariyildiz/titan-project:ref:refs/heads/main"]
+      values = ["repo:denizsariyildiz/titan-project:ref:refs/heads/main"]
     }
   }
-
+  
 }
 
 
 resource "aws_iam_role" "github_actions" {
-
-  name               = "titan-github-actions-role"
-  assume_role_policy = data.aws_iam_policy_document.github_actions_assume_role.json
+  
+    name = "titan-github-actions-role"
+    assume_role_policy = data.aws_iam_policy_document.github_actions_assume_role.json
 }
 
 resource "aws_iam_role_policy_attachment" "github_actions_ecr" {
-  role       = aws_iam_role.github_actions.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser"
-
-}
-
-resource "aws_iam_role" "rds_monitoring" {
-  name = "titan-rds-monitoring-role"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [{
-      Action    = "sts:AssumeRole",
-      Effect    = "Allow",
-      Principal = { Service = "monitoring.rds.amazonaws.com" }
-    }]
-  })
+    role       = aws_iam_role.github_actions.name
+    policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser"
+  
 }
 
 

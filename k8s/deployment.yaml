@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: titan-api-deployment
+spec:
+  replicas: 2 
+  selector:
+    matchLabels:
+      app: titan-api
+  template:
+    metadata:
+      labels:
+        app: titan-api
+    spec:
+      containers:
+      - name: titan-api-container
+        image: DOCKER_IMAGE_PLACEHOLDER 
+        ports:
+        - containerPort: 5000

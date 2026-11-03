@@ -17,7 +17,8 @@ resource "aws_subnet" "public_a" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "titan-public-subnet-a"
+    Name                     = "titan-public-subnet-a"
+    "kubernetes.io/role/elb" = "1" # lets Service type=LoadBalancer find public subnets
   }
 }
 
@@ -28,7 +29,8 @@ resource "aws_subnet" "public_b" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "titan-public-subnet-b"
+    Name                     = "titan-public-subnet-b"
+    "kubernetes.io/role/elb" = "1" # lets Service type=LoadBalancer find public subnets
   }
 }
 
@@ -39,7 +41,8 @@ resource "aws_subnet" "private_a" {
   availability_zone = "eu-central-1a"
 
   tags = {
-    Name = "titan-private-subnet-a"
+    Name                              = "titan-private-subnet-a"
+    "kubernetes.io/role/internal-elb" = "1"
   }
 }
 
@@ -50,7 +53,8 @@ resource "aws_subnet" "private_b" {
   availability_zone = "eu-central-1b"
 
   tags = {
-    Name = "titan-private-subnet-b"
+    Name                              = "titan-private-subnet-b"
+    "kubernetes.io/role/internal-elb" = "1"
   }
 
 }

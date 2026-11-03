@@ -16,7 +16,8 @@ resource "aws_db_instance" "titan_db" {
   engine                 = "postgres"
   engine_version         = "17.6"
   username               = "titanadmin"
-  password               = "TitanPass123!"
+  # Password is generated and stored in AWS Secrets Manager by RDS (never in code)
+  manage_master_user_password = true
   db_subnet_group_name   = aws_db_subnet_group.titan_db.name
   vpc_security_group_ids = []
 

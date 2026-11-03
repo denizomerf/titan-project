@@ -19,7 +19,7 @@ resource "aws_db_instance" "titan_db" {
   # Password is generated and stored in AWS Secrets Manager by RDS (never in code)
   manage_master_user_password = true
   db_subnet_group_name   = aws_db_subnet_group.titan_db.name
-  vpc_security_group_ids = []
+  vpc_security_group_ids = [aws_security_group.db.id]
 
   multi_az            = true
   publicly_accessible = false
@@ -31,4 +31,30 @@ resource "aws_db_instance" "titan_db" {
   }
 
 
+}
+
+# Only the EKS cluster (nodes and pods) can reach PostgreSQL
+resource "aws_security_group" "db" {
+  name        = "titan-db-sg"
+  description = "PostgreSQL access from the Titan EKS cluster"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description     = "PostgreSQL from the EKS cluster security group"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_eks_cluster.main.vpc_config[0].cluster_security_group_id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "titan-db-sg"
+  }
 }

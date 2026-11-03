@@ -109,7 +109,6 @@ jobs:
             exit 1
           fi
 
-          # Render the real image into the manifest so no pod ever starts with the placeholder
           sed -i "s|DOCKER_IMAGE_PLACEHOLDER|${{ steps.resolve-image.outputs.deploy_image }}|" k8s/deployment.yaml
           kubectl apply -f k8s/
           kubectl rollout status deployment/titan-api-deployment --timeout=180s

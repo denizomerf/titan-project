@@ -1,4 +1,3 @@
-# VPC Flow Logs to CloudWatch (uses the vpc_flow_log_role defined in iam.tf)
 resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
   name              = "/aws/vpc/titan-flow-logs"
   retention_in_days = 7

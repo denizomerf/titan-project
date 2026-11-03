@@ -10,7 +10,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app/ .
 
-# Run as an unprivileged user
 RUN useradd --create-home --uid 10001 appuser
 USER 10001
 

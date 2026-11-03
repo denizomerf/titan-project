@@ -18,7 +18,7 @@ resource "aws_subnet" "public_a" {
 
   tags = {
     Name                     = "titan-public-subnet-a"
-    "kubernetes.io/role/elb" = "1" # lets Service type=LoadBalancer find public subnets
+    "kubernetes.io/role/elb" = "1"
   }
 }
 
@@ -30,7 +30,7 @@ resource "aws_subnet" "public_b" {
 
   tags = {
     Name                     = "titan-public-subnet-b"
-    "kubernetes.io/role/elb" = "1" # lets Service type=LoadBalancer find public subnets
+    "kubernetes.io/role/elb" = "1"
   }
 }
 

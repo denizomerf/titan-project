@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive -diff
+      - run: terraform init -backend=false
+      - run: terraform validate
+
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t titan-api:ci .
+      - name: Smoke test
+        run: |
+          docker run -d --name api -p 5000:5000 titan-api:ci
+          for i in $(seq 1 20); do curl -sf localhost:5000/healthz && break; sleep 1; done
+          curl -sf localhost:5000/ | grep -q "Hello"
+
+  manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Kubernetes manifests
+        run: docker run --rm -v "$PWD/k8s:/k8s" ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary /k8s

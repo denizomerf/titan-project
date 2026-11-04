@@ -3,7 +3,6 @@ resource "aws_security_group" "eks_nodes" {
   description = "Security group for Titan EKS worker nodes"
   vpc_id      = aws_vpc.main.id
 
-  # Kural 1: Dışarıya tüm trafiğe izin ver (İnternete çıkabilmeleri için).
   egress {
     from_port   = 0
     to_port     = 0
@@ -24,7 +23,6 @@ resource "aws_eks_cluster" "main" {
   version  = "1.29"
 
   vpc_config {
-    # Use security_group_ids to associate security groups with the cluster
     security_group_ids = [aws_security_group.eks_nodes.id]
     subnet_ids         = [aws_subnet.private_a.id, aws_subnet.private_b.id]
   }

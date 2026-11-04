@@ -1,70 +1,85 @@
 # Titan
 
-Flask API running on EKS, with all of the AWS infrastructure written in Terraform. Pushing to `main` builds the image, pushes it to ECR and deploys it to the cluster through GitHub Actions.
+[![CI](https://github.com/denizomerf/titan-project/actions/workflows/ci.yml/badge.svg)](https://github.com/denizomerf/titan-project/actions/workflows/ci.yml)
 
-## Architecture
+A Flask API on Amazon EKS with the full AWS environment defined in Terraform: a two-AZ VPC, a private EKS node group, Multi-AZ PostgreSQL and an ECR registry. GitHub Actions builds the image and deploys it to the cluster through an IAM role assumed with OIDC, so no long-lived AWS credentials are stored in GitHub.
 
-```mermaid
-flowchart LR
-    dev[git push] --> gha[GitHub Actions]
-    gha -- OIDC --> aws[(AWS)]
-    gha -- push image --> ecr[ECR]
-    gha -- kubectl apply --> eks
-    subgraph VPC [VPC - 2 AZs]
-        subgraph pub [public subnets]
-            nat[NAT GW]
-            lb[Load Balancer]
-        end
-        subgraph priv [private subnets]
-            eks[EKS nodes]
-            rds[(RDS Postgres)]
-        end
-    end
-    user[user] --> lb --> eks
-    eks --> rds
-    ecr --> eks
-```
+![Architecture](docs/architecture.png)
 
-- VPC with public and private subnets in two AZs, a NAT gateway and flow logs to CloudWatch
-- EKS cluster and managed node group in the private subnets
-- RDS PostgreSQL (Multi-AZ). The master password is managed by RDS in Secrets Manager and the DB only accepts traffic from the cluster security group
-- ECR repo with scan on push
-- GitHub Actions authenticates with an IAM role over OIDC, so there are no AWS keys in the repo settings
-- Terraform state in S3 (versioned, encrypted) with a DynamoDB lock table
+## Infrastructure
 
-## Files
+| Component | Details |
+|---|---|
+| Network | VPC `10.0.0.0/16`, public and private subnets in `eu-central-1a/1b`, NAT gateway, VPC Flow Logs to CloudWatch |
+| Compute | EKS 1.29, managed node group (`t3.small`, 1–3 nodes) in private subnets |
+| Database | RDS PostgreSQL 17, Multi-AZ, private. Master password managed by RDS in Secrets Manager; access limited to the EKS cluster security group |
+| Registry | ECR with image scanning on push |
+| Access | GitHub OIDC role scoped to `main`, mapped into the cluster via `aws-auth` |
+| State | S3 backend (versioned, encrypted, public access blocked) with DynamoDB locking |
+
+## Application
+
+- Flask API served by gunicorn, running as a non-root user
+- `/` returns a greeting, `/healthz` is used by the readiness and liveness probes
+- Kubernetes Deployment with 2 replicas, resource requests/limits, exposed through a `LoadBalancer` Service
+
+## CI/CD
+
+| Workflow | Trigger | Steps |
+|---|---|---|
+| [`ci.yml`](.github/workflows/ci.yml) | push, pull request | `terraform fmt` + `validate`, Docker build and smoke test, manifest validation with kubeconform |
+| [`deploy.yml`](.github/workflows/deploy.yml) | manual | Assume the OIDC role, push the image to ECR, apply the manifests, wait for the rollout |
+
+## Repository structure
 
 ```
-vpc.tf, flow_logs.tf        network
-eks.tf, iam.tf, kubernetes.tf   cluster, node group, IAM roles, aws-auth
-rds.tf                      database + security group
-ecr.tf                      image registry
-main.tf, backend.tf         provider, state bucket, lock table
-app/                        Flask app
-k8s/                        Deployment and LoadBalancer Service
-.github/workflows/main.yml  build, push, deploy
+.
+├── app/                    Flask application
+├── k8s/                    Deployment and Service manifests
+├── vpc.tf, flow_logs.tf    Networking
+├── eks.tf, iam.tf          EKS cluster, node group, IAM roles
+├── kubernetes.tf           aws-auth mapping
+├── rds.tf                  PostgreSQL and its security group
+├── ecr.tf                  Container registry
+├── main.tf, backend.tf     Provider, state bucket, lock table
+└── .github/workflows/      CI and deploy pipelines
 ```
 
-## Running it
+## Getting started
+
+Prerequisites: AWS account, AWS CLI, Terraform >= 1.5, kubectl.
 
 ```bash
 terraform init
 terraform apply
 
 aws eks update-kubeconfig --region eu-central-1 --name titan-eks-cluster
-kubectl get pods,svc
+kubectl get nodes
+```
 
-# DB password
+Deploy the application by running the **Deploy** workflow from the Actions tab, then:
+
+```bash
+kubectl get svc titan-api-service     # external hostname of the load balancer
+```
+
+Retrieve the database password:
+
+```bash
 aws secretsmanager get-secret-value \
   --secret-id "$(terraform output -raw db_master_user_secret_arn)" \
   --query SecretString --output text
+```
 
+Tear down:
+
+```bash
 terraform destroy
 ```
 
-## TODO
+## Roadmap
 
-- One NAT gateway per AZ (kept to one for cost)
-- Upgrade EKS from 1.29
-- Give the CI role a namespaced Role instead of `system:masters`
-- Move the state bucket and lock table into their own bootstrap config
+- One NAT gateway per AZ (a single gateway is used to reduce cost)
+- Upgrade EKS to a currently supported version
+- Replace the `system:masters` mapping for CI with a namespaced Role or EKS access entries
+- Move the state bucket and lock table into a separate bootstrap configuration

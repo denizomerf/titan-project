@@ -10,15 +10,15 @@ resource "aws_db_subnet_group" "titan_db" {
 
 
 resource "aws_db_instance" "titan_db" {
-  identifier             = "titan-db-instance"
-  allocated_storage      = 20
-  instance_class         = "db.t3.micro"
-  engine                 = "postgres"
-  engine_version         = "17.6"
-  username               = "titanadmin"
+  identifier                  = "titan-db-instance"
+  allocated_storage           = 20
+  instance_class              = "db.t3.micro"
+  engine                      = "postgres"
+  engine_version              = "17.6"
+  username                    = "titanadmin"
   manage_master_user_password = true
-  db_subnet_group_name   = aws_db_subnet_group.titan_db.name
-  vpc_security_group_ids = [aws_security_group.db.id]
+  db_subnet_group_name        = aws_db_subnet_group.titan_db.name
+  vpc_security_group_ids      = [aws_security_group.db.id]
 
   multi_az            = true
   publicly_accessible = false
